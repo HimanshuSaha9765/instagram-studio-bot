@@ -7,22 +7,21 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Get token from environment variable
 TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 PORT = int(os.environ.get('PORT', 8000))
 
 app = Flask(__name__)
 
-# Bot command handlers
 async def start(update: Update, context):
-    await update.message.reply_text('🚀 Hello! AXIOM is online!
+    message = 'Hello! AXIOM is online!
 
-Send me any message.')
+Send me any message.'
+    await update.message.reply_text(message)
 
 async def echo(update: Update, context):
-    await update.message.reply_text(f'✅ AXIOM received: {update.message.text}')
+    response = f'AXIOM received: {update.message.text}'
+    await update.message.reply_text(response)
 
-# Initialize bot application
 application = Application.builder().token(TOKEN).updater(None).build()
 application.add_handler(CommandHandler('start', start))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
