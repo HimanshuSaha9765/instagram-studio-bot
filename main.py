@@ -1,26 +1,57 @@
 import os
 import logging
 import requests
+import re
+import yt_dlp
 from flask import Flask, request
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
-TELEGRAM_API = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
+TELEGRAM_API = f'https://api.telegram.org/bot{TOKEN}'
 
 app = Flask(__name__)
 
 def send_telegram_message(chat_id, text):
-    payload = {
-        'chat_id': chat_id,
-        'text': text
-    }
+    payload = {'chat_id': chat_id, 'text': text}
     try:
-        response = requests.post(TELEGRAM_API, json=payload)
+        response = requests.post(f'{TELEGRAM_API}/sendMessage', json=payload)
         return response.json()
     except Exception as e:
         logger.error(f'Send message error: {e}')
+        return None
+
+def send_telegram_video(chat_id, video_path):
+    try:
+        with open(video_path, 'rb') as video:
+            files = {'video': video}
+            data = {'chat_id': chat_id}
+            response = requests.post(f'{TELEGRAM_API}/sendVideo', data=data, files=files)
+        return response.json()
+    except Exception as e:
+        logger.error(f'Send video error: {e}')
+        return None
+
+def is_instagram_url(text):
+    instagram_pattern = r'(https?://)?(www.)?(instagram.com|instagr.am)/(p|reel|tv)/[w-]+'
+    return re.search(instagram_pattern, text) is not None
+
+def download_instagram(url):
+    ydl_opts = {
+        'format': 'best',
+        'outtmpl': '/tmp/%(id)s.%(ext)s',
+        'quiet': True,
+        'no_warnings': True
+    }
+    
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+            return filename
+    except Exception as e:
+        logger.error(f'Download error: {e}')
         return None
 
 @app.route('/webhook', methods=['POST'])
@@ -36,9 +67,26 @@ def webhook():
                 text = message['text']
                 
                 if text == '/start':
-                    send_telegram_message(chat_id, 'Hello! AXIOM is online! Send me any message.')
+                    send_telegram_message(chat_id, 'Hello! AXIOM is online!
+
+Send me an Instagram link.')
+                elif is_instagram_url(text):
+                    send_telegram_message(chat_id, 'Downloading from Instagram...')
+                    
+                    video_path = download_instagram(text)
+                    
+                    if video_path:
+                        send_telegram_message(chat_id, 'Sending video...')
+                        send_telegram_video(chat_id, video_path)
+                        
+                        if os.path.exists(video_path):
+                            os.remove(video_path)
+                    else:
+                        send_telegram_message(chat_id, 'Failed to download. Please try another link.')
                 else:
-                    send_telegram_message(chat_id, f'AXIOM received: {text}')
+                    send_telegram_message(chat_id, f'AXIOM received: {text}
+
+Send an Instagram link to download.')
         
         return 'ok', 200
     except Exception as e:
