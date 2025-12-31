@@ -1,33 +1,48 @@
 import os
 import logging
+import requests
 from flask import Flask, request
-from telegram import Update, Bot
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
-bot = Bot(token=TOKEN)
+TELEGRAM_API = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
 
 app = Flask(__name__)
+
+def send_telegram_message(chat_id, text):
+    payload = {
+        'chat_id': chat_id,
+        'text': text
+    }
+    try:
+        response = requests.post(TELEGRAM_API, json=payload)
+        return response.json()
+    except Exception as e:
+        logger.error(f'Send message error: {e}')
+        return None
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     try:
-        update = Update.de_json(request.get_json(force=True), bot)
+        data = request.get_json()
         
-        if update.message and update.message.text:
-            chat_id = update.message.chat_id
-            text = update.message.text
+        if 'message' in data:
+            message = data['message']
+            chat_id = message['chat']['id']
             
-            if text == '/start':
-                bot.send_message(chat_id=chat_id, text='Hello! AXIOM is online! Send me any message.')
-            else:
-                bot.send_message(chat_id=chat_id, text='AXIOM received: ' + text)
+            if 'text' in message:
+                text = message['text']
+                
+                if text == '/start':
+                    send_telegram_message(chat_id, 'Hello! AXIOM is online! Send me any message.')
+                else:
+                    send_telegram_message(chat_id, f'AXIOM received: {text}')
         
         return 'ok', 200
     except Exception as e:
-        logger.error('Error: ' + str(e))
+        logger.error(f'Webhook error: {e}')
         return 'error', 500
 
 @app.route('/health', methods=['GET'])
