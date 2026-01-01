@@ -41,22 +41,36 @@ def is_instagram_url(text):
     return False
     
 def download_instagram(url):
+    cookies = os.environ.get('INSTAGRAM_COOKIES', '')
+    cookie_file = None
+    
+    if cookies:
+        cookie_file = '/tmp/cookies.txt'
+        with open(cookie_file, 'w') as f:
+            f.write(cookies)
+    
     ydl_opts = {
         'format': 'best',
         'outtmpl': '/tmp/%(id)s.%(ext)s',
         'quiet': True,
         'no_warnings': True
     }
+    
+    if cookie_file:
+        ydl_opts['cookiefile'] = cookie_file
+    
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
+            if cookie_file and os.path.exists(cookie_file):
+                os.remove(cookie_file)
             return filename
     except Exception as e:
         logger.error(f'Download error: {e}')
+        if cookie_file and os.path.exists(cookie_file):
+            os.remove(cookie_file)
         return None
-
-@app.route('/webhook', methods=['POST'])
 def webhook():
     try:
         data = request.get_json()
