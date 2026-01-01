@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: instagram-studio-bot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn main:app
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: COOKIE_BASE64
+        sync: false
+      - key: PORT
+        value: 8000
