@@ -62,9 +62,8 @@ def download_instagram(url):
     ydl_opts = {
         'format': 'best',
         'outtmpl': '/tmp/%(id)s.%(ext)s',
-        'quiet': False,
-        'no_warnings': False,
-        'writethumbnail': False
+        'quiet': True,
+        'no_warnings': True
     }
     if cookie_file:
         ydl_opts['cookiefile'] = cookie_file
@@ -72,8 +71,7 @@ def download_instagram(url):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
-            ext = filename.split('.')[-1].lower()
-            is_video = ext in ['mp4', 'mov', 'avi', 'webm', 'mkv']
+            is_video = 'vcodec' in info and info['vcodec'] != 'none'
             if cookie_file and os.path.exists(cookie_file):
                 os.remove(cookie_file)
             return filename, is_video
