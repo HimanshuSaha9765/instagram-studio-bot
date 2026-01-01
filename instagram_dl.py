@@ -44,19 +44,27 @@ def download_with_ytdlp(url):
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
             
-            caption = info.get('description', '')
-            username = info.get('uploader', '') or info.get('channel', '')
-            track_info = info.get('track', '')
-            artist_info = info.get('artist', '')
+            username = info.get('uploader', '') or info.get('channel', '') or info.get('uploader_id', '')
+            caption_text = info.get('description', '')
+            track_name = info.get('track', '')
+            artist_name = info.get('artist', '')
             
-            music_credit = ''
-            if track_info or artist_info:
-                music_credit = f'Music: {track_info} - {artist_info}' if track_info and artist_info else f'Music: {track_info or artist_info}'
+            formatted_caption = ''
             
-            full_caption = f'@{username}' if username else ''
-            if caption:
-                full_caption += f'{caption}'
-            full_caption += music_credit
+            if username:
+                formatted_caption = f'@{username}'
+            
+            if caption_text:
+                clean_text = caption_text.strip()
+                if len(clean_text) > 500:
+                    clean_text = clean_text[:500] + '...'
+                formatted_caption += f'{clean_text}'
+            
+            if track_name or artist_name:
+                music_info = f'🎵 {track_name}' if track_name else ''
+                if artist_name:
+                    music_info += f' - {artist_name}' if track_name else f'🎵 {artist_name}'
+                formatted_caption += music_info
             
             media_type = 'video'
             
@@ -67,7 +75,7 @@ def download_with_ytdlp(url):
                 'success': True,
                 'files': [filename],
                 'media_type': media_type,
-                'caption': full_caption,
+                'caption': formatted_caption.strip(),
                 'username': username
             }
     except Exception as e:
@@ -96,6 +104,16 @@ def download_with_instaloader(url):
         post = instaloader.Post.from_shortcode(L.context, shortcode)
         files = []
         caption = post.caption if post.caption else ''
+        username = post.owner_username if hasattr(post, 'owner_username') else '' 
+        
+        formatted_caption = ''
+        if username:
+            formatted_caption = f'@{username}'
+        if caption:
+            clean_text = caption.strip()
+            if len(clean_text) > 500:
+                clean_text = clean_text[:500] + '...'
+            formatted_caption += clean_text
         
         if post.typename == 'GraphSidecar':
             for i, node in enumerate(post.get_sidecar_nodes()):
@@ -128,7 +146,7 @@ def download_with_instaloader(url):
             'success': True,
             'files': files,
             'media_type': media_type,
-            'caption': caption,
+            'caption': formatted_caption.strip(),
             'is_carousel': post.typename == 'GraphSidecar'
         }
     except Exception as e:
