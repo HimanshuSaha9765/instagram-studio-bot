@@ -51,17 +51,11 @@ def download_with_ytdlp(url):
             
             music_credit = ''
             if track_info or artist_info:
-                music_credit = f'
-
-Music: {track_info} - {artist_info}' if track_info and artist_info else f'
-
-Music: {track_info or artist_info}'
+                music_credit = f'Music: {track_info} - {artist_info}' if track_info and artist_info else f'Music: {track_info or artist_info}'
             
             full_caption = f'@{username}' if username else ''
             if caption:
-                full_caption += f'
-
-{caption}'
+                full_caption += f'{caption}'
             full_caption += music_credit
             
             media_type = 'video'
