@@ -51,19 +51,19 @@ def is_instagram_url(text):
 
 def download_instagram(url):
     import yt_dlp
-    cookies = os.environ.get('INSTAGRAM_COOKIES', '')
+    import base64
+    cookie_b64 = os.environ.get('COOKIE_BASE64', '')
     cookie_file = None
-    if cookies:
+    if cookie_b64:
         cookie_file = '/tmp/cookies.txt'
+        cookie_content = base64.b64decode(cookie_b64).decode('utf-8')
         with open(cookie_file, 'w') as f:
-            f.write(cookies)
+            f.write(cookie_content)
     ydl_opts = {
         'format': 'best',
         'outtmpl': '/tmp/%(id)s.%(ext)s',
         'quiet': True,
-        'no_warnings': True,
-        'writethumbnail': False,
-        'skip_download': False
+        'no_warnings': True
     }
     if cookie_file:
         ydl_opts['cookiefile'] = cookie_file
@@ -71,9 +71,7 @@ def download_instagram(url):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
-            is_video = False
-            if 'vcodec' in info and info['vcodec'] != 'none':
-                is_video = True
+            is_video = 'vcodec' in info and info['vcodec'] != 'none'
             if cookie_file and os.path.exists(cookie_file):
                 os.remove(cookie_file)
             return filename, is_video
@@ -82,7 +80,7 @@ def download_instagram(url):
         if cookie_file and os.path.exists(cookie_file):
             os.remove(cookie_file)
         return None, False
-
+        
 @app.route('/webhook', methods=['POST'])
 def webhook():
     try:
