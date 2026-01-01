@@ -108,7 +108,3 @@ def handle_callback(callback_query):
 @app.route('/health', methods=['GET'])
 def health():
     return 'AXIOM System Active', 200
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8000))
-    app.run(host='0.0.0.0', port=port)
