@@ -43,7 +43,27 @@ def download_with_ytdlp(url):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
+            
             caption = info.get('description', '')
+            username = info.get('uploader', '') or info.get('channel', '')
+            track_info = info.get('track', '')
+            artist_info = info.get('artist', '')
+            
+            music_credit = ''
+            if track_info or artist_info:
+                music_credit = f'
+
+Music: {track_info} - {artist_info}' if track_info and artist_info else f'
+
+Music: {track_info or artist_info}'
+            
+            full_caption = f'@{username}' if username else ''
+            if caption:
+                full_caption += f'
+
+{caption}'
+            full_caption += music_credit
+            
             media_type = 'video'
             
             if cookie_file and os.path.exists(cookie_file):
@@ -53,7 +73,8 @@ def download_with_ytdlp(url):
                 'success': True,
                 'files': [filename],
                 'media_type': media_type,
-                'caption': caption
+                'caption': full_caption,
+                'username': username
             }
     except Exception as e:
         logger.error(f'yt-dlp error: {e}')
