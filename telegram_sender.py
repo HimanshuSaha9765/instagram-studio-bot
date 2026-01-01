@@ -30,6 +30,31 @@ def send_video(chat_id, video_path, caption=None, has_spoiler=False):
         logger.error(f'Send video error: {e}')
         return None
 
+def send_video_with_button(chat_id, video_path, caption=None, video_id=None):
+    try:
+        keyboard = None
+        if video_id:
+            keyboard = create_inline_keyboard([
+                [
+                    {'text': '🎵 Extract Audio', 'callback_data': f'audio:{video_id}'},
+                    {'text': '❌ No Audio', 'callback_data': f'noaudio:{video_id}'}
+                ]
+            ])
+        
+        with open(video_path, 'rb') as video:
+            files = {'video': video}
+            data = {'chat_id': chat_id, 'supports_streaming': True}
+            if caption:
+                data['caption'] = caption
+            if keyboard:
+                import json
+                data['reply_markup'] = json.dumps(keyboard)
+            response = requests.post(f'{TELEGRAM_API}/sendVideo', data=data, files=files, timeout=300)
+        return response.json()
+    except Exception as e:
+        logger.error(f'Send video with button error: {e}')
+        return None
+
 def send_photo(chat_id, photo_path, caption=None):
     try:
         with open(photo_path, 'rb') as photo:
@@ -54,6 +79,17 @@ def send_audio(chat_id, audio_path, title=None):
         return response.json()
     except Exception as e:
         logger.error(f'Send audio error: {e}')
+        return None
+
+def answer_callback(callback_id, text=None):
+    try:
+        payload = {'callback_query_id': callback_id}
+        if text:
+            payload['text'] = text
+        response = requests.post(f'{TELEGRAM_API}/answerCallbackQuery', json=payload)
+        return response.json()
+    except Exception as e:
+        logger.error(f'Answer callback error: {e}')
         return None
 
 def create_inline_keyboard(buttons):
