@@ -28,15 +28,7 @@ def webhook():
                 text = message['text']
                 
                 if text == '/start':
-                    welcome_text = 'Hello! AXIOM Instagram Studio Bot
-
-Send Instagram link (reel/post/carousel)
-
-Features:
-- Smart quality optimization
-- Photo & video support
-- Audio extraction
-- Auto compression'
+                    welcome_text = 'Hello! AXIOM Instagram Studio Bot.\n Send Instagram link (reel/post/carousel) \n Features: \n - Smart quality optimization \n- Photo & video support \n- Audio extraction \n- Auto compression'
                     send_message(chat_id, welcome_text)
                 
                 elif is_instagram_url(text):
