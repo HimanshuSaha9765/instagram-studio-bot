@@ -34,9 +34,12 @@ def send_telegram_video(chat_id, video_path):
         return None
 
 def is_instagram_url(text):
-    instagram_pattern = r'(https?://)?(www.)?(instagram.com|instagr.am)/(p|reel|tv)/[w-]+'
-    return re.search(instagram_pattern, text) is not None
-
+    text = text.strip()
+    if 'instagram.com' in text or 'instagr.am' in text:
+        if '/p/' in text or '/reel/' in text or '/tv/' in text:
+            return True
+    return False
+    
 def download_instagram(url):
     ydl_opts = {
         'format': 'best',
