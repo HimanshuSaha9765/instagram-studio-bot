@@ -59,23 +59,20 @@ def webhook():
                         
                         if is_video:
                             optimized, size = optimize_media(file_path, 'video')
-                            
                             if not optimized:
-                                send_message(chat_id, f'Video too large ({size:.1f}MB) even after compression.')
+                                send_message(chat_id, f'Video too large ({size:.1f}MB) after compression.')
                                 if os.path.exists(file_path):
                                     os.remove(file_path)
                                 continue
                             
-                            audio_path = file_path.replace('.mp4', '_audio.mp3')
-                            audio_extracted = extract_audio(optimized, audio_path)
-                            
-                            keyboard = None
-                            if audio_extracted:
-                                keyboard = create_inline_keyboard([
-                                    [{'text': '🎵 Download Audio', 'callback_data': f'audio:{os.path.basename(audio_path)}'}]
-                                ])
-                            
                             send_video(chat_id, optimized, caption)
+                            
+                            audio_path = optimized.replace('.mp4', '_audio.mp3')
+                            audio_result = extract_audio(optimized, audio_path)
+                            if audio_result and os.path.exists(audio_path):
+                                send_message(chat_id, 'Audio extracted. Sending...')
+                                send_audio(chat_id, audio_path, 'Instagram Audio')
+                                os.remove(audio_path)
                             
                             if os.path.exists(optimized):
                                 os.remove(optimized)
