@@ -70,17 +70,9 @@ def download_with_instaloader(url):
             download_comments=False,
             save_metadata=False,
             compress_json=False,
-            dirname_pattern=TEMP_DIR
+            dirname_pattern=TEMP_DIR,
+            filename_pattern='{shortcode}'
         )
-        
-        if COOKIE_BASE64:
-            cookie_file = f'{TEMP_DIR}/cookies_insta.txt'
-            cookie_content = base64.b64decode(COOKIE_BASE64).decode('utf-8')
-            with open(cookie_file, 'w') as f:
-                f.write(cookie_content)
-            L.load_cookies_from_file(cookie_file)
-            if os.path.exists(cookie_file):
-                os.remove(cookie_file)
         
         shortcode = get_shortcode(url)
         if not shortcode:
@@ -96,20 +88,24 @@ def download_with_instaloader(url):
                     video_url = node.video_url
                     filename = f'{TEMP_DIR}/{shortcode}_{i}.mp4'
                     L.download_pic(filename, video_url, post.date_utc)
-                    files.append(filename)
+                    if os.path.exists(filename):
+                        files.append(filename)
                 else:
                     image_url = node.display_url
                     filename = f'{TEMP_DIR}/{shortcode}_{i}.jpg'
                     L.download_pic(filename, image_url, post.date_utc)
-                    files.append(filename)
+                    if os.path.exists(filename):
+                        files.append(filename)
         elif post.is_video:
             filename = f'{TEMP_DIR}/{shortcode}.mp4'
             L.download_pic(filename, post.video_url, post.date_utc)
-            files.append(filename)
+            if os.path.exists(filename):
+                files.append(filename)
         else:
             filename = f'{TEMP_DIR}/{shortcode}.jpg'
             L.download_pic(filename, post.url, post.date_utc)
-            files.append(filename)
+            if os.path.exists(filename):
+                files.append(filename)
         
         media_type = 'video' if post.is_video else 'photo'
         
