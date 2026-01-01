@@ -44,7 +44,7 @@ def clean_caption(caption, max_length=1000):
     if not caption:
         return None
     caption = caption.strip()
-    lines = caption.split('')
+    lines = caption.splitlines()
     clean_lines = []
     for line in lines:
         line = line.strip()
@@ -52,7 +52,7 @@ def clean_caption(caption, max_length=1000):
             clean_lines.append(line)
         if len(clean_lines) >= 3:
             break
-    result = ''.join(clean_lines[:3])
+    result = ' '.join(clean_lines[:3])
     if len(result) > max_length:
         result = result[:max_length] + '...'
     return result if result else None
