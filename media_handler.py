@@ -61,6 +61,7 @@ def optimize_media(file_path, media_type='video'):
     file_size = get_file_size_mb(file_path)
     if file_size <= MAX_FILE_SIZE_MB:
         return file_path, file_size
+    
     if media_type == 'video':
         compressed_path = file_path.replace('.mp4', '_compressed.mp4')
         result = compress_video(file_path, compressed_path)
@@ -69,4 +70,7 @@ def optimize_media(file_path, media_type='video'):
             if new_size <= MAX_FILE_SIZE_MB:
                 os.remove(file_path)
                 return result, new_size
+            else:
+                os.remove(result)
+    
     return None, file_size
