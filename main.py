@@ -31,6 +31,17 @@ def send_telegram_video(chat_id, video_path):
         logger.error(f'Send video error: {e}')
         return None
 
+def send_telegram_photo(chat_id, photo_path):
+    try:
+        with open(photo_path, 'rb') as photo:
+            files = {'photo': photo}
+            data = {'chat_id': chat_id}
+            response = requests.post(f'{TELEGRAM_API}/sendPhoto', data=data, files=files)
+        return response.json()
+    except Exception as e:
+        logger.error(f'Send photo error: {e}')
+        return None
+
 def is_instagram_url(text):
     text = text.strip()
     if 'instagram.com' in text or 'instagr.am' in text:
@@ -58,14 +69,15 @@ def download_instagram(url):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
+            media_type = 'video' if 'vcodec' in info and info['vcodec'] != 'none' else 'photo'
             if cookie_file and os.path.exists(cookie_file):
                 os.remove(cookie_file)
-            return filename
+            return filename, media_type
     except Exception as e:
         logger.error(f'Download error: {e}')
         if cookie_file and os.path.exists(cookie_file):
             os.remove(cookie_file)
-        return None
+        return None, None
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -80,12 +92,16 @@ def webhook():
                     send_telegram_message(chat_id, 'Hello AXIOM is online. Send me an Instagram link.')
                 elif is_instagram_url(text):
                     send_telegram_message(chat_id, 'Downloading from Instagram...')
-                    video_path = download_instagram(text)
-                    if video_path:
-                        send_telegram_message(chat_id, 'Sending video...')
-                        send_telegram_video(chat_id, video_path)
-                        if os.path.exists(video_path):
-                            os.remove(video_path)
+                    result = download_instagram(text)
+                    if result[0]:
+                        file_path, media_type = result
+                        send_telegram_message(chat_id, 'Sending media...')
+                        if media_type == 'video':
+                            send_telegram_video(chat_id, file_path)
+                        else:
+                            send_telegram_photo(chat_id, file_path)
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
                     else:
                         send_telegram_message(chat_id, 'Failed to download. Try another link.')
                 else:
@@ -94,7 +110,7 @@ def webhook():
     except Exception as e:
         logger.error(f'Webhook error: {e}')
         return 'error', 500
-
+        
 @app.route('/health', methods=['GET'])
 def health():
     return 'AXIOM System Active', 200
