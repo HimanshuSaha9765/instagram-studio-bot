@@ -15,6 +15,15 @@ def send_message(chat_id, text, reply_markup=None):
         logger.error(f'Send message error: {e}')
         return None
 
+def delete_message(chat_id, message_id):
+    try:
+        payload = {'chat_id': chat_id, 'message_id': message_id}
+        response = requests.post(f'{TELEGRAM_API}/deleteMessage', json=payload)
+        return response.json()
+    except Exception as e:
+        logger.error(f'Delete message error: {e}')
+        return None
+
 def send_video(chat_id, video_path, caption=None, has_spoiler=False):
     try:
         with open(video_path, 'rb') as video:
