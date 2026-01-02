@@ -2,7 +2,7 @@ import os
 import logging
 import base64
 import yt_dlp
-import instaloader
+from instagrapi import Client
 from config import COOKIE_BASE64, TEMP_DIR
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ def download_with_ytdlp(url):
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
             
-            username = info.get('uploader', '') or info.get('channel', '') or info.get('uploader_id', '')
+            username = info.get('uploader_id', '') or info.get('uploader', '') or info.get('channel', '')
             caption_text = info.get('description', '')
             track_name = info.get('track', '')
             artist_name = info.get('artist', '')
@@ -52,12 +52,13 @@ def download_with_ytdlp(url):
             formatted_caption = ''
             
             if username:
-                formatted_caption = f'@{username}'
+                clean_username = username.replace('@', '').strip()
+                formatted_caption = f'@{clean_username}'
             
             if caption_text:
                 clean_text = caption_text.strip()
-                if len(clean_text) > 500:
-                    clean_text = clean_text[:500] + '...'
+                if len(clean_text) > 400:
+                    clean_text = clean_text[:400] + '...'
                 formatted_caption += f'{clean_text}'
             
             if track_name or artist_name:
@@ -84,73 +85,62 @@ def download_with_ytdlp(url):
             os.remove(cookie_file)
         return None
 
-def download_with_instaloader(url):
+def download_with_instagrapi(url):
     try:
-        L = instaloader.Instaloader(
-            download_videos=True,
-            download_video_thumbnails=False,
-            download_geotags=False,
-            download_comments=False,
-            save_metadata=False,
-            compress_json=False,
-            dirname_pattern=TEMP_DIR,
-            filename_pattern='{shortcode}'
-        )
+        cl = Client()
+        cl.delay_range = [1, 3]
         
         shortcode = get_shortcode(url)
         if not shortcode:
             return None
         
-        post = instaloader.Post.from_shortcode(L.context, shortcode)
+        media_pk = cl.media_pk_from_code(shortcode)
+        media_info = cl.media_info(media_pk)
+        
         files = []
-        caption = post.caption if post.caption else ''
-        username = post.owner_username if hasattr(post, 'owner_username') else '' 
+        username = media_info.user.username if media_info.user else ''
+        caption_text = media_info.caption_text if media_info.caption_text else ''
         
         formatted_caption = ''
         if username:
             formatted_caption = f'@{username}'
-        if caption:
-            clean_text = caption.strip()
-            if len(clean_text) > 500:
-                clean_text = clean_text[:500] + '...'
+        if caption_text:
+            clean_text = caption_text.strip()
+            if len(clean_text) > 400:
+                clean_text = clean_text[:400] + '...'
             formatted_caption += clean_text
         
-        if post.typename == 'GraphSidecar':
-            for i, node in enumerate(post.get_sidecar_nodes()):
-                if node.is_video:
-                    video_url = node.video_url
-                    filename = f'{TEMP_DIR}/{shortcode}_{i}.mp4'
-                    L.download_pic(filename, video_url, post.date_utc)
-                    if os.path.exists(filename):
-                        files.append(filename)
-                else:
-                    image_url = node.display_url
-                    filename = f'{TEMP_DIR}/{shortcode}_{i}.jpg'
-                    L.download_pic(filename, image_url, post.date_utc)
-                    if os.path.exists(filename):
-                        files.append(filename)
-        elif post.is_video:
-            filename = f'{TEMP_DIR}/{shortcode}.mp4'
-            L.download_pic(filename, post.video_url, post.date_utc)
-            if os.path.exists(filename):
-                files.append(filename)
-        else:
-            filename = f'{TEMP_DIR}/{shortcode}.jpg'
-            L.download_pic(filename, post.url, post.date_utc)
-            if os.path.exists(filename):
-                files.append(filename)
+        if media_info.media_type == 1:
+            photo_path = cl.photo_download(media_pk, folder=TEMP_DIR)
+            if os.path.exists(photo_path):
+                files.append(photo_path)
+        elif media_info.media_type == 2:
+            video_path = cl.video_download(media_pk, folder=TEMP_DIR)
+            if os.path.exists(video_path):
+                files.append(video_path)
+        elif media_info.media_type == 8:
+            for resource in media_info.resources:
+                if resource.media_type == 1:
+                    photo_path = cl.photo_download_by_url(resource.thumbnail_url, folder=TEMP_DIR)
+                    if os.path.exists(photo_path):
+                        files.append(photo_path)
+                elif resource.media_type == 2:
+                    video_path = cl.video_download_by_url(resource.video_url, folder=TEMP_DIR)
+                    if os.path.exists(video_path):
+                        files.append(video_path)
         
-        media_type = 'video' if post.is_video else 'photo'
+        is_carousel = media_info.media_type == 8
+        media_type = 'video' if media_info.media_type == 2 else 'photo'
         
         return {
             'success': True,
             'files': files,
             'media_type': media_type,
             'caption': formatted_caption.strip(),
-            'is_carousel': post.typename == 'GraphSidecar'
+            'is_carousel': is_carousel
         }
     except Exception as e:
-        logger.error(f'Instaloader error: {e}')
+        logger.error(f'Instagrapi error: {e}')
         return None
 
 def download_instagram(url):
@@ -158,7 +148,7 @@ def download_instagram(url):
     if result and result['success']:
         return result
     
-    result = download_with_instaloader(url)
+    result = download_with_instagrapi(url)
     if result and result['success']:
         return result
     
