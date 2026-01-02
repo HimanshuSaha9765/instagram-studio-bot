@@ -6,8 +6,7 @@ from flask import Flask, request
 from config import TOKEN, AUDIO_CACHE_TIMEOUT
 from instagram_dl import is_instagram_url, download_instagram
 from media_handler import optimize_media, extract_audio, get_file_size_mb
-from telegram_sender import (send_message, send_video, send_photo, send_audio, 
-                              send_video_with_button, answer_callback, delete_message)
+from telegram_sender import (send_message, send_video, send_photo, send_audio, send_video_with_button, answer_callback, delete_message)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
